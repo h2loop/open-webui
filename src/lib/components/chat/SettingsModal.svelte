@@ -418,54 +418,54 @@
 				'webhookurl'
 			]
 		},
-		{
-			id: 'about',
-			title: 'About',
-			keywords: [
-				'about app',
-				'about me',
-				'about open webui',
-				'about page',
-				'about us',
-				'aboutapp',
-				'aboutme',
-				'aboutopenwebui',
-				'aboutpage',
-				'aboutus',
-				'check for updates',
-				'checkforupdates',
-				'contact',
-				'copyright',
-				'details',
-				'discord',
-				'documentation',
-				'github',
-				'help',
-				'information',
-				'license',
-				'redistributions',
-				'release',
-				'see whats new',
-				'seewhatsnew',
-				'settings',
-				'software info',
-				'softwareinfo',
-				'support',
-				'terms and conditions',
-				'terms of use',
-				'termsandconditions',
-				'termsofuse',
-				'timothy jae ryang baek',
-				'timothy j baek',
-				'timothyjaeryangbaek',
-				'timothyjbaek',
-				'twitter',
-				'update info',
-				'updateinfo',
-				'version info',
-				'versioninfo'
-			]
-		}
+		// {
+		// 	id: 'about',
+		// 	title: 'About',
+		// 	keywords: [
+		// 		'about app',
+		// 		'about me',
+		// 		'about open webui',
+		// 		'about page',
+		// 		'about us',
+		// 		'aboutapp',
+		// 		'aboutme',
+		// 		'aboutopenwebui',
+		// 		'aboutpage',
+		// 		'aboutus',
+		// 		'check for updates',
+		// 		'checkforupdates',
+		// 		'contact',
+		// 		'copyright',
+		// 		'details',
+		// 		'discord',
+		// 		'documentation',
+		// 		'github',
+		// 		'help',
+		// 		'information',
+		// 		'license',
+		// 		'redistributions',
+		// 		'release',
+		// 		'see whats new',
+		// 		'seewhatsnew',
+		// 		'settings',
+		// 		'software info',
+		// 		'softwareinfo',
+		// 		'support',
+		// 		'terms and conditions',
+		// 		'terms of use',
+		// 		'termsandconditions',
+		// 		'termsofuse',
+		// 		'timothy jae ryang baek',
+		// 		'timothy j baek',
+		// 		'timothyjaeryangbaek',
+		// 		'timothyjbaek',
+		// 		'twitter',
+		// 		'update info',
+		// 		'updateinfo',
+		// 		'version info',
+		// 		'versioninfo'
+		// 	]
+		// }
 	];
 
 	let availableSettings = [];
@@ -808,7 +808,7 @@
 								</div>
 								<div class=" self-center">{$i18n.t('Account')}</div>
 							</button>
-						{:else if tabId === 'about'}
+						<!-- {:else if tabId === 'about'}
 							<button
 								role="tab"
 								aria-controls="tab-about"
@@ -831,7 +831,7 @@
 									<InfoCircle strokeWidth="2" />
 								</div>
 								<div class=" self-center">{$i18n.t('About')}</div>
-							</button>
+							</button> -->
 						{/if}
 					{/each}
 				{:else}
@@ -911,8 +911,8 @@
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
-				{:else if selectedTab === 'about'}
-					<About />
+				<!-- {:else if selectedTab === 'about'}
+					<About /> -->
 				{/if}
 			</div>
 		</div>
