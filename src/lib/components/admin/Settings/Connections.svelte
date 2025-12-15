@@ -347,7 +347,7 @@
 								</div>
 							</div>
 
-							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							<!-- <div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
 								{$i18n.t('Trouble accessing Ollama?')}
 								<a
 									class=" text-gray-300 font-medium underline"
@@ -356,7 +356,7 @@
 								>
 									{$i18n.t('Click here for help.')}
 								</a>
-							</div>
+							</div> -->
 						</div>
 					{/if}
 				</div>
