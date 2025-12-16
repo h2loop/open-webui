@@ -236,7 +236,7 @@
 					</select>
 				</div>
 			</div>
-			{#if $i18n.language === 'en-US' && !($config?.license_metadata ?? false)}
+			<!-- {#if $i18n.language === 'en-US' && !($config?.license_metadata ?? false)}
 				<div
 					class="mb-2 text-xs {($settings?.highContrastMode ?? false)
 						? 'text-gray-800 dark:text-gray-100'
@@ -253,7 +253,7 @@
 						Help us translate H2Loop Playground!
 					</a>
 				</div>
-			{/if}
+			{/if} -->
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">

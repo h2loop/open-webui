@@ -153,7 +153,7 @@
 									{/if}
 								</div>
 
-								<button
+								<!-- <button
 									class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
 									type="button"
 									on:click={() => {
@@ -161,7 +161,7 @@
 									}}
 								>
 									<div>{$i18n.t("See what's new")}</div>
-								</button>
+								</button> -->
 							</div>
 
 							{#if $config?.features?.enable_version_update_check}
@@ -178,7 +178,7 @@
 						</div>
 					</div>
 
-					<div class="mb-2.5">
+					<!-- <div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
 							<div class="text-xs pr-2">
 								<div class="">
@@ -222,11 +222,11 @@
 								</a>
 							</div>
 						</div>
-					</div>
+					</div> -->
 
 					<div class="mb-2.5">
 						<div class="flex w-full justify-between items-center">
-							<div class="text-xs pr-2">
+							<!-- <div class="text-xs pr-2">
 								<div class="">
 									{$i18n.t('License')}
 								</div>
@@ -268,7 +268,7 @@
 										</span>
 									</a>
 								{/if}
-							</div>
+							</div> -->
 
 							<!-- <button
 								class="flex-shrink-0 text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
