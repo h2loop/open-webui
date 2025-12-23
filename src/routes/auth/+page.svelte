@@ -20,6 +20,7 @@
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import { redirect } from '@sveltejs/kit';
+	import { keycloakAuth } from '$lib/stores/keycloakAuth';
 
 	const i18n = getContext('i18n');
 
@@ -153,6 +154,29 @@
 		}
 	}
 
+	const keycloakCallbackHandler = async () => {
+		const redirectParam = $page.url.searchParams.get('redirect');
+		if(redirectParam) {
+			const redirectUrl = decodeURIComponent(redirectParam);
+			const url = new URL(redirectUrl, window.location.origin);
+			if(url.pathname === '/auth/keycloak/callback') {
+				const code = url.searchParams.get('code');
+				const state = url.searchParams.get('state');
+				if(code && state) {
+					try {
+						await keycloakAuth.handleCallback(code, state);
+					} catch (error) {
+						console.error('Keycloak Callback error:', error);
+						toast.error("Authentication failed");
+						goto('/auth');
+					}
+				} else {
+					goto('/auth?error=Invalid callback parameters');
+			}
+		}
+	}
+}
+
 	onMount(async () => {
 		const redirectPath = $page.url.searchParams.get('redirect');
 		if ($user !== undefined) {
@@ -173,6 +197,8 @@
 
 		loaded = true;
 		setLogoImage();
+
+		await keycloakCallbackHandler();
 
 		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
 			await signInHandler();
@@ -401,6 +427,12 @@
 									{/if}
 								</div>
 							</form>
+
+										<button class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5" on:click={() => {
+											keycloakAuth.login();
+										}}>
+											<span>Continue with Keycloak</span>
+										</button>
 
 							{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
 								<div class="inline-flex items-center justify-center w-full">
