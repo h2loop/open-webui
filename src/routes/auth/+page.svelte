@@ -204,6 +204,10 @@
 			await signInHandler();
 		} else {
 			onboarding = $config?.onboarding ?? false;
+			// Only initiate Keycloak login if not handling a callback
+			if (!redirectPath || !redirectPath.includes('/auth/keycloak/callback')) {
+				await keycloakAuth.login();
+			}
 		}
 	});
 </script>
@@ -228,7 +232,7 @@
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
 	{#if loaded}
-		<div
+		<!-- <div
 			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
 			id="auth-container"
 		>
@@ -428,12 +432,6 @@
 								</div>
 							</form>
 
-										<button class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5" on:click={() => {
-											keycloakAuth.login();
-										}}>
-											<span>Continue with Keycloak</span>
-										</button>
-
 							{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
 								<div class="inline-flex items-center justify-center w-full">
 									<hr class="w-32 h-px my-4 border-0 dark:bg-gray-100/10 bg-gray-700/10" />
@@ -614,6 +612,6 @@
 					</div>
 				</div>
 			</div>
-		{/if}
+		{/if} -->
 	{/if}
 </div>
