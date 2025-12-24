@@ -141,13 +141,13 @@ export const keycloakAuth = (() => {
 
 		// localStorage.token = tokenData.accessToken;
 
-		// const credentials: AuthCredentials = {
-		// 	clientToken: tokenData.accessToken,
-		// 	refreshToken: tokenData.refreshToken,
-		// 	sessionId: state
-		// };
+		const credentials: AuthCredentials = {
+			clientToken: tokenData.accessToken,
+			refreshToken: tokenData.refreshToken,
+			sessionId: state
+		};
 
-		// storeCredentials(credentials);
+		storeCredentials(credentials);
 
 		const userInfo = await keycloakService.getUserInfo(tokenData.accessToken);
 		console.log(`User info retrieved:`, userInfo);
@@ -185,7 +185,7 @@ export const keycloakAuth = (() => {
 			await keycloakService.logout(current.refreshToken);
 		}
 		clearCredentials();
-		goto('/auth');
+		window.location.href = '/auth';
 	};
 
 	return {
