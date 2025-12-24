@@ -6,8 +6,11 @@ import {
 	KEYCLOAK_BASE_URL,
 	KEYCLOAK_CLIENT_ID,
 	KEYCLOAK_CLIENT_SECRET,
-	KEYCLOAK_REALM
+	KEYCLOAK_REALM,
+	WEBUI_API_BASE_URL
 } from '$lib/constants';
+import { getSessionUser } from '$lib/apis/auths';
+import { user as userStore } from '$lib/stores';
 
 const AUTH_STATE_KEY = 'keycloak-auth-state';
 
@@ -136,22 +139,39 @@ export const keycloakAuth = (() => {
 		const redirectUri = `${window.location.origin}/auth/keycloak/callback`;
 		const tokenData = await keycloakService.exchangeCodeForTokens(code, redirectUri);
 
-		localStorage.token = tokenData.accessToken;
+		// localStorage.token = tokenData.accessToken;
 
-		const credentials: AuthCredentials = {
-			clientToken: tokenData.accessToken,
-			refreshToken: tokenData.refreshToken,
-			sessionId: state
-		};
+		// const credentials: AuthCredentials = {
+		// 	clientToken: tokenData.accessToken,
+		// 	refreshToken: tokenData.refreshToken,
+		// 	sessionId: state
+		// };
 
-		storeCredentials(credentials);
+		// storeCredentials(credentials);
 
 		const userInfo = await keycloakService.getUserInfo(tokenData.accessToken);
+		console.log(`User info retrieved:`, userInfo);
+
+		const response = await fetch(`${WEBUI_API_BASE_URL}/auths/keycloak/callback`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(userInfo)
+		});
+
+		if (!response.ok) {
+			throw new Error('Authentication failed');
+		}
+
+		const { token, user } = await response.json();
+		localStorage.token = token;
+
+		const sessionUser = await getSessionUser(token);
+		userStore.set(sessionUser);
 
 		set({
 			isAuthenticated: true,
-			user: userInfo,
-			accessToken: tokenData.accessToken,
+			user: user,
+			accessToken: token,
 			refreshToken: tokenData.refreshToken || null
 		});
 

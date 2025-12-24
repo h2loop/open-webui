@@ -454,6 +454,56 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
     except Exception as e:
         log.error(f"LDAP authentication error: {str(e)}")
         raise HTTPException(400, detail="LDAP authentication failed.")
+    
+    
+@router.post("/keycloak/callback")
+async def keycloak_callback(request: Request, response: Response, user_info: dict):
+    sub = user_info.get("sub")
+    email = user_info.get("email")
+    name = user_info.get("name") or user_info.get("preferred_username")
+
+    if not email and not sub:
+        return JSONResponse(status_code=400, content={"detail": "Invalid user info"})
+
+   # Check if user exists by oauth_sub
+    user = Users.get_user_by_oauth_sub(f"keycloak@{sub}")
+    if not user:
+        # Check by email for merging
+        user = Users.get_user_by_email(email)
+        if user:
+            # Link existing user to Keycloak
+            Users.update_user_oauth_sub_by_id(user.id, f"keycloak@{sub}")
+        else:
+            # Create new user if signup enabled
+            # if not request.app.state.config.get('ENABLE_OAUTH_SIGNUP', True):
+            #     return JSONResponse(status_code=403, content={"detail": "Signup not enabled"})
+
+            user = Auths.insert_new_auth(
+                email=email,
+                password=get_password_hash(str(uuid.uuid4())),  # Random password
+                name=name,
+                role=request.app.state.config.DEFAULT_USER_ROLE,
+                oauth_sub=f"keycloak@{sub}",
+            )
+
+    if not user:
+        return JSONResponse(status_code=500, content={"detail": "Failed to create or find user"})
+
+    token = create_token(
+        data={"id": user.id},
+        expires_delta=parse_duration(request.app.state.config.JWT_EXPIRES_IN),
+    )
+
+    response.set_cookie(
+        key="token",
+        value=token,
+        httponly=True,
+        samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+        secure=WEBUI_AUTH_COOKIE_SECURE,
+    )
+
+    return {"token": token, "user": user.model_dump() if user else None}
+
 
 
 ############################
