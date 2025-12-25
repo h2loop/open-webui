@@ -6,7 +6,7 @@
 	onMount(() => {
 		if ($user?.role !== 'admin') {
 			if ($user?.permissions?.workspace?.models) {
-				goto('/workspace/models');
+				goto('/workspace/models');	
 			} else if ($user?.permissions?.workspace?.knowledge) {
 				goto('/workspace/knowledge');
 			} else if ($user?.permissions?.workspace?.prompts) {

@@ -1,4 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { keycloakAuth } from '$lib/stores/keycloakAuth';
 
 export const getAdminDetails = async (token: string) => {
 	let error = null;
@@ -327,29 +328,38 @@ export const userSignUp = async (
 export const userSignOut = async () => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signout`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json'
-		},
-		credentials: 'include'
-	})
-		.then(async (res) => {
+	const results = await Promise.allSettled([
+		keycloakAuth.logout(),
+		fetch(`${WEBUI_API_BASE_URL}/auths/signout`, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			credentials: 'include'
+		}).then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
 		})
-		.catch((err) => {
-			console.error(err);
-			error = err.detail;
-			return null;
-		});
+	]);
+
+	const keycloakLogoutResult = results[0];
+	const signoutResult = results[1];
+
+	if (keycloakLogoutResult.status === 'rejected') {
+		console.error('Keycloak logout failed:', keycloakLogoutResult.reason);
+	}
+
+	if (signoutResult.status === 'rejected') {
+		console.error(signoutResult.reason);
+		error = signoutResult.reason.detail || signoutResult.reason;
+	}
 
 	if (error) {
 		throw error;
 	}
 
 	sessionStorage.clear();
-	return res;
+	return signoutResult.status === 'fulfilled' ? signoutResult.value : null;
 };
 
 export const addUser = async (

@@ -50,6 +50,7 @@
 	import { beforeNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { keycloakAuth } from '$lib/stores/keycloakAuth';
 
 	// handle frontend updates (https://svelte.dev/docs/kit/configuration#version)
 	beforeNavigate(({ willUnload, to }) => {
@@ -684,6 +685,8 @@
 			document.getElementById('splash-screen')?.remove();
 			loaded = true;
 		}
+
+		keycloakAuth.initialize();
 
 		return () => {
 			window.removeEventListener('resize', onResize);
