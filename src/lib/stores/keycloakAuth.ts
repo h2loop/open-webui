@@ -130,7 +130,6 @@ export const keycloakAuth = (() => {
 	};
 
 	const handleCallback = async (code: string, state: string) => {
-		console.log('Handling Keycloak callback with code:', code, 'and state:', state);
 		const storedState = localStorage.getItem(AUTH_STATE_KEY);
 		if (state !== storedState) {
 			throw new Error('Invalid state parameter');
@@ -150,7 +149,6 @@ export const keycloakAuth = (() => {
 		storeCredentials(credentials);
 
 		const userInfo = await keycloakService.getUserInfo(tokenData.accessToken);
-		console.log(`User info retrieved:`, userInfo);
 
 		const response = await fetch(`${WEBUI_API_BASE_URL}/auths/keycloak/callback`, {
 			method: 'POST',
