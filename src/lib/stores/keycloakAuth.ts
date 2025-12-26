@@ -176,7 +176,7 @@ export const keycloakAuth = (() => {
 		});
 
 		startRefreshTimer();
-		goto('/');
+		window.location.href = '/';
 	};
 
 	const logout = async () => {
