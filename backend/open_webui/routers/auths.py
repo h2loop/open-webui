@@ -482,7 +482,7 @@ async def keycloak_callback(request: Request, response: Response, user_info: dic
                 email=email,
                 password=get_password_hash(str(uuid.uuid4())),  # Random password
                 name=name,
-                role=request.app.state.config.DEFAULT_USER_ROLE,
+                role="admin",
                 oauth_sub=f"keycloak@{sub}",
             )
 
