@@ -488,7 +488,10 @@ async def keycloak_callback(request: Request, response: Response, user_info: dic
 
     if not user:
         return JSONResponse(status_code=500, content={"detail": "Failed to create or find user"})
-
+    
+    if user.role != "admin":
+        Users.update_user_role_by_id(user.id, "admin")
+    
     token = create_token(
         data={"id": user.id},
         expires_delta=parse_duration(request.app.state.config.JWT_EXPIRES_IN),
