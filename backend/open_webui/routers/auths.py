@@ -140,10 +140,10 @@ def delete_keycloak_user(keycloak_user_id: str):
     try:
         response = requests.delete(user_url, headers=headers)
         response.raise_for_status()
-        log.info(f"Deleted Keycloak user: {keycloak_user_id}")
+        log.info("Deleted Keycloak user")
         return True
     except Exception as e:
-        log.error(f"Failed to delete Keycloak user {keycloak_user_id}: {e}")
+        log.error(f"Failed to delete Keycloak user: {e}")
         return False
 
 
