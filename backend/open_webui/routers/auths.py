@@ -120,7 +120,7 @@ def create_keycloak_user(email: str, name: str, password: str):
         response = requests.post(user_url, json=user_data, headers=headers)
         response.raise_for_status()
         user_id = response.headers.get("Location").split("/")[-1] if response.headers.get("Location") else None
-        log.info(f"Created Keycloak user: {email}, ID: {user_id}")
+        log.info("Created Keycloak user")
         return user_id
     except Exception as e:
         log.error(f"Failed to create Keycloak user {email}: {e}")
@@ -174,10 +174,10 @@ def update_keycloak_user(keycloak_user_id: str, email: str, name: str, password:
     try:
         response = requests.put(user_url, json=user_data, headers=headers)
         response.raise_for_status()
-        log.info(f"Updated Keycloak user: {keycloak_user_id}")
+        log.info("Updated Keycloak user")
         return True
     except Exception as e:
-        log.error(f"Failed to update Keycloak user {keycloak_user_id}: {e}")
+        log.error(f"Failed to update Keycloak user: {e}")
         return False
 
 ############################
