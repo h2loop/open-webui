@@ -126,6 +126,26 @@ def create_keycloak_user(email: str, name: str, password: str):
         log.error(f"Failed to create Keycloak user {email}: {e}")
         return None
 
+
+def delete_keycloak_user(keycloak_user_id: str):
+    token = get_keycloak_admin_token()
+    if not token:
+        log.error("No admin token available for Keycloak")
+        return False
+
+    user_url = f"{KEYCLOAK_BASE_URL}/admin/realms/{KEYCLOAK_REALM}/users/{keycloak_user_id}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+    }
+    try:
+        response = requests.delete(user_url, headers=headers)
+        response.raise_for_status()
+        log.info(f"Deleted Keycloak user: {keycloak_user_id}")
+        return True
+    except Exception as e:
+        log.error(f"Failed to delete Keycloak user {keycloak_user_id}: {e}")
+        return False
+
 ############################
 # GetSessionUser
 ############################

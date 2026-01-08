@@ -12,6 +12,8 @@ from pydantic import BaseModel
 from open_webui.models.auths import Auths
 from open_webui.models.oauth_sessions import OAuthSessions
 
+from open_webui.routers.auths import delete_keycloak_user
+
 from open_webui.models.groups import Groups
 from open_webui.models.chats import Chats
 from open_webui.models.users import (
@@ -521,8 +523,14 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not verify primary admin status.",
         )
-
+        
     if user.id != user_id:
+        # Check if user has Keycloak integration and delete from Keycloak
+        user_to_delete = Users.get_user_by_id(user_id)
+        if user_to_delete and user_to_delete.oauth_sub and user_to_delete.oauth_sub.startswith("keycloak@"):
+            keycloak_user_id = user_to_delete.oauth_sub.split("@", 1)[1]
+            delete_keycloak_user(keycloak_user_id)
+
         result = Auths.delete_auth_by_id(user_id)
 
         if result:
