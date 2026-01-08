@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from open_webui.models.auths import Auths
 from open_webui.models.oauth_sessions import OAuthSessions
 
-from open_webui.routers.auths import delete_keycloak_user
+from open_webui.routers.auths import delete_keycloak_user, update_keycloak_user
 
 from open_webui.models.groups import Groups
 from open_webui.models.chats import Chats
@@ -489,6 +489,15 @@ async def update_user_by_id(
         )
 
         if updated_user:
+            # Update Keycloak user info if integrated
+            if updated_user.oauth_sub and updated_user.oauth_sub.startswith("keycloak@"):
+                keycloak_user_id = updated_user.oauth_sub.split("@", 1)[1]
+                update_keycloak_user(
+                    keycloak_user_id,
+                    updated_user.email,
+                    updated_user.name,
+                    form_data.password if form_data.password else None
+                )
             return updated_user
 
         raise HTTPException(

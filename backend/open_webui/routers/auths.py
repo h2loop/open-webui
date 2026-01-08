@@ -146,6 +146,40 @@ def delete_keycloak_user(keycloak_user_id: str):
         log.error(f"Failed to delete Keycloak user {keycloak_user_id}: {e}")
         return False
 
+
+def update_keycloak_user(keycloak_user_id: str, email: str, name: str, password: Optional[str] = None):
+    token = get_keycloak_admin_token()
+    if not token:
+        log.error("No admin token available for Keycloak")
+        return False
+
+    user_url = f"{KEYCLOAK_BASE_URL}/admin/realms/{KEYCLOAK_REALM}/users/{keycloak_user_id}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    user_data = {
+        "email": email,
+        "firstName": name.split()[0] if name else "",
+        "lastName": " ".join(name.split()[1:]) if name and len(name.split()) > 1 else "",
+    }
+    if password:
+        user_data["credentials"] = [
+            {
+                "type": "password",
+                "value": password,
+                "temporary": False,
+            }
+        ]
+    try:
+        response = requests.put(user_url, json=user_data, headers=headers)
+        response.raise_for_status()
+        log.info(f"Updated Keycloak user: {keycloak_user_id}")
+        return True
+    except Exception as e:
+        log.error(f"Failed to update Keycloak user {keycloak_user_id}: {e}")
+        return False
+
 ############################
 # GetSessionUser
 ############################
