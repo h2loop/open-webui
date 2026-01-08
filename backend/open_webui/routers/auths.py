@@ -3,6 +3,7 @@ import uuid
 import time
 import datetime
 import logging
+import requests
 from aiohttp import ClientSession
 
 from open_webui.models.auths import (
@@ -31,6 +32,10 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SECURE,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
     ENABLE_INITIAL_ADMIN_SIGNUP,
+    KEYCLOAK_ADMIN_PASSWORD,
+    KEYCLOAK_ADMIN_USERNAME,
+    KEYCLOAK_BASE_URL,
+    KEYCLOAK_REALM,
     SRC_LOG_LEVELS,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -63,6 +68,63 @@ router = APIRouter()
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+
+def get_keycloak_admin_token():
+    if not KEYCLOAK_ADMIN_USERNAME or not KEYCLOAK_ADMIN_PASSWORD:
+        return None
+
+    token_url = f"{KEYCLOAK_BASE_URL}/realms/master/protocol/openid-connect/token"
+    
+    data = {
+        "client_id": "admin-cli",
+        "username": KEYCLOAK_ADMIN_USERNAME,
+        "password": KEYCLOAK_ADMIN_PASSWORD,
+        "grant_type": "password",
+    }
+    try:
+        response = requests.post(token_url, data=data)
+        response.raise_for_status()
+        return response.json().get("access_token")
+    except Exception as e:
+        log.error(f"Failed to get Keycloak admin token: {e}")
+        return None
+
+
+def create_keycloak_user(email: str, name: str, password: str):
+    token = get_keycloak_admin_token()
+    if not token:
+        log.error("No admin token available for Keycloak")
+        return None
+
+    user_url = f"{KEYCLOAK_BASE_URL}/admin/realms/{KEYCLOAK_REALM}/users"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    user_data = {
+        "username": email,
+        "email": email,
+        "firstName": name.split()[0] if name else "",
+        "lastName": " ".join(name.split()[1:]) if name and len(name.split()) > 1 else "",
+        "enabled": True,
+        "credentials": [
+            {
+                "type": "password",
+                "value": password,
+                "temporary": False,
+            }
+        ],
+    }
+    try:
+        response = requests.post(user_url, json=user_data, headers=headers)
+        response.raise_for_status()
+        user_id = response.headers.get("Location").split("/")[-1] if response.headers.get("Location") else None
+        log.info(f"Created Keycloak user: {email}, ID: {user_id}")
+        return user_id
+    except Exception as e:
+        log.error(f"Failed to create Keycloak user {email}: {e}")
+        return None
 
 ############################
 # GetSessionUser
@@ -815,6 +877,12 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
         )
 
         if user:
+            keycloak_user_id = create_keycloak_user(
+                form_data.email.lower(), form_data.name, form_data.password
+            )
+            if keycloak_user_id:
+                Users.update_user_oauth_sub_by_id(user.id, f"keycloak@{keycloak_user_id}")
+
             token = create_token(data={"id": user.id})
             return {
                 "token": token,
