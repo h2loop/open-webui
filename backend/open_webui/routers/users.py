@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 import base64
 import io
+import time
 
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -353,7 +354,7 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
             **{
                 "name": user.name,
                 "profile_image_url": user.profile_image_url,
-                "active": get_active_status_by_user_id(user_id),
+                "active": user.active,
             }
         )
     else:
@@ -419,8 +420,13 @@ async def get_user_profile_image_by_id(user_id: str, user=Depends(get_verified_u
 
 @router.get("/{user_id}/active", response_model=dict)
 async def get_user_active_status_by_id(user_id: str, user=Depends(get_verified_user)):
+    user_obj = Users.get_user_by_id(user_id)
+    if user_obj:
+        return {
+            "active": user_obj.active,
+        }
     return {
-        "active": get_user_active_status(user_id),
+        "active": False,
     }
 
 
@@ -517,14 +523,13 @@ async def deactivate_user_by_id(
     user=Depends(get_admin_user),
 ):
     if user.id != user_id:
-        auth = Auths.get_auth_by_id(user_id)
-        if not auth or not auth.active:
+        user_to_deactivate = Users.get_user_by_id(user_id)
+        if not user_to_deactivate or not user_to_deactivate.active:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.USER_ALREADY_DEACTIVATED,
             )
-        user_to_deactivate = Users.get_user_by_id(user_id)
-        
+
         if user_to_deactivate:
             # Deactivate Keycloak user if integrated
             if user_to_deactivate.oauth_sub and user_to_deactivate.oauth_sub.startswith("keycloak@"):
@@ -536,11 +541,13 @@ async def deactivate_user_by_id(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                         detail=ERROR_MESSAGES.FAILED_KEYCLOAK_USER_DEACTIVATION,
                     )
-                auth_updated = Auths.update_user_active_status_by_id(user_id, False)
-                if auth_updated:
-                    updated_user = Users.get_user_by_id(user_id)
-                    print(f"Deactivated user: {updated_user}", flush=True)
-                    return updated_user
+            # Update User table
+            updated_user = Users.update_user_by_id(
+                user_id,
+                {"active": False, "deactivated_at": int(time.time())}
+            )
+            if updated_user:
+                return updated_user
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(),

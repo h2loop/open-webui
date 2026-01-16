@@ -126,12 +126,12 @@ class AuthsTable:
         log.info(f"authenticate_user: {email}")
 
         user = Users.get_user_by_email(email)
-        if not user:
+        if not user or not user.active:
             return None
 
         try:
             with get_db() as db:
-                auth = db.query(Auth).filter_by(id=user.id, active=True).first()
+                auth = db.query(Auth).filter_by(id=user.id).first()
                 if auth:
                     if verify_password(password, auth.password):
                         return user
@@ -158,10 +158,11 @@ class AuthsTable:
         log.info(f"authenticate_user_by_email: {email}")
         try:
             with get_db() as db:
-                auth = db.query(Auth).filter_by(email=email, active=True).first()
+                auth = db.query(Auth).filter_by(email=email).first()
                 if auth:
                     user = Users.get_user_by_id(auth.id)
-                    return user
+                    if user and user.active:
+                        return user
         except Exception:
             return None
 
