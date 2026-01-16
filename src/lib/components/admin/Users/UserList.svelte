@@ -344,20 +344,20 @@
 			</thead>
 			<tbody class="">
 				{#each users as user, userIdx}
-					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs {user.active ? '' : 'opacity-40'}">
 						<td class="px-3 py-1 min-w-[7rem] w-28">
-							<button
-								class=" translate-y-0.5"
-								on:click={() => {
-									selectedUser = user;
-									showEditUserModal = !showEditUserModal;
-								}}
-							>
-								<Badge
-									type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
-									content={$i18n.t(user.role)}
-								/>
-							</button>
+								<button
+									class=" translate-y-0.5"
+									on:click={() => {
+										selectedUser = user;
+										showEditUserModal = !showEditUserModal;
+									}}
+								>
+									<Badge
+										type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
+										content={$i18n.t(user.role)}
+									/>
+								</button>
 						</td>
 						<td class="px-3 py-1 font-medium text-gray-900 dark:text-white max-w-48">
 							<div class="flex items-center">
