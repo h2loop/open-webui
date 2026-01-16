@@ -935,12 +935,14 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
 
     try:
         hashed = get_password_hash(form_data.password)
+        username = form_data.username or form_data.email.lower()
         user = Auths.insert_new_auth(
-            form_data.email.lower(),
-            hashed,
-            form_data.name,
-            form_data.profile_image_url,
-            form_data.role,
+            email=form_data.email.lower(),
+            password=hashed,
+            name=form_data.name,
+            username=username,
+            profile_image_url=form_data.profile_image_url,
+            role=form_data.role,
         )
 
         if user:

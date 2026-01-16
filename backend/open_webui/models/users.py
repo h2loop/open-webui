@@ -163,6 +163,7 @@ class UsersTable:
         profile_image_url: str = "/user.png",
         role: str = "pending",
         oauth_sub: Optional[str] = None,
+        username: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
             user = UserModel(
@@ -170,6 +171,7 @@ class UsersTable:
                     "id": id,
                     "name": name,
                     "email": email,
+                    "username": username,
                     "role": role,
                     "profile_image_url": profile_image_url,
                     "last_active_at": int(time.time()),

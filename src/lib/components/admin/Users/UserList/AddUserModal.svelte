@@ -23,6 +23,7 @@
 
 	let _user = {
 		name: '',
+		username: '',
 		email: '',
 		password: '',
 		role: 'user'
@@ -31,6 +32,7 @@
 	$: if (show) {
 		_user = {
 			name: '',
+			username: '',
 			email: '',
 			password: '',
 			role: 'user'
@@ -52,7 +54,8 @@
 				_user.email,
 				_user.password,
 				_user.role,
-				generateInitialsImage(_user.name)
+				generateInitialsImage(_user.name),
+				_user.username
 			).catch((error) => {
 				toast.error(`${error}`);
 			});
@@ -80,16 +83,21 @@
 
 						if (idx > 0) {
 							if (
-								columns.length === 4 &&
-								['admin', 'user', 'pending'].includes(columns[3].toLowerCase())
+								(columns.length === 4 || columns.length === 5) &&
+								['admin', 'user', 'pending'].includes(columns[columns.length - 1].toLowerCase())
 							) {
+								const username = columns.length === 5 ? columns[1] : '';
+								const email = columns.length === 5 ? columns[2] : columns[1];
+								const password = columns.length === 5 ? columns[3] : columns[2];
+								const role = columns.length === 5 ? columns[4] : columns[3];
 								const res = await addUser(
 									localStorage.token,
 									columns[0],
-									columns[1],
-									columns[2],
-									columns[3].toLowerCase(),
-									generateInitialsImage(columns[0])
+									email,
+									password,
+									role.toLowerCase(),
+									generateInitialsImage(columns[0]),
+									username
 								).catch((error) => {
 									toast.error(`Row ${idx + 1}: ${error}`);
 									return null;
@@ -207,6 +215,20 @@
 								</div>
 							</div>
 
+							<div class="flex flex-col w-full mt-1">
+								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Username')}</div>
+
+								<div class="flex-1">
+									<input
+										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+										type="text"
+										bind:value={_user.username}
+										placeholder={$i18n.t('Enter Username (optional)')}
+										autocomplete="off"
+									/>
+								</div>
+							</div>
+
 							<hr class=" border-gray-100 dark:border-gray-850 my-2.5 w-full" />
 
 							<div class="flex flex-col w-full">
@@ -265,7 +287,7 @@
 
 								<div class=" text-xs text-gray-500">
 									ⓘ {$i18n.t(
-										'Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.'
+										'Ensure your CSV file includes 4 or 5 columns in this order: Name, [Username], Email, Password, Role.'
 									)}
 									<a
 										class="underline dark:text-gray-200"
