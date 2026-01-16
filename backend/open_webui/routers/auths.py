@@ -24,6 +24,8 @@ from open_webui.models.oauth_sessions import OAuthSessions
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
+    H2LOOP_BASE_URL,
+    KEYCLOAK_CLIENT_SECRET,
     WEBUI_AUTH,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
@@ -32,10 +34,9 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SECURE,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
     ENABLE_INITIAL_ADMIN_SIGNUP,
-    KEYCLOAK_ADMIN_PASSWORD,
-    KEYCLOAK_ADMIN_USERNAME,
     KEYCLOAK_BASE_URL,
     KEYCLOAK_REALM,
+    KEYCLOAK_CLIENT_ID,
     SRC_LOG_LEVELS,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -71,16 +72,12 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 def get_keycloak_admin_token():
-    if not KEYCLOAK_ADMIN_USERNAME or not KEYCLOAK_ADMIN_PASSWORD:
-        return None
-
-    token_url = f"{KEYCLOAK_BASE_URL}/realms/master/protocol/openid-connect/token"
+    token_url = f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/token"
     
     data = {
-        "client_id": "admin-cli",
-        "username": KEYCLOAK_ADMIN_USERNAME,
-        "password": KEYCLOAK_ADMIN_PASSWORD,
-        "grant_type": "password",
+        "grant_type": "client_credentials",
+        "client_id": KEYCLOAK_CLIENT_ID,
+        "client_secret": KEYCLOAK_CLIENT_SECRET,
     }
     try:
         response = requests.post(token_url, data=data)
@@ -97,7 +94,7 @@ def create_keycloak_user(email: str, name: str, password: str):
         log.error("No admin token available for Keycloak")
         return None
 
-    user_url = f"{KEYCLOAK_BASE_URL}/admin/realms/{KEYCLOAK_REALM}/users"
+    user_url = f"{H2LOOP_BASE_URL}/api/v1/user-management/register/"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
@@ -107,24 +104,40 @@ def create_keycloak_user(email: str, name: str, password: str):
         "email": email,
         "firstName": name.split()[0] if name else "",
         "lastName": " ".join(name.split()[1:]) if name and len(name.split()) > 1 else "",
-        "enabled": True,
-        "credentials": [
-            {
-                "type": "password",
-                "value": password,
-                "temporary": False,
-            }
-        ],
+        "password": password,
+        "custom_token": token,
     }
     try:
         response = requests.post(user_url, json=user_data, headers=headers)
         response.raise_for_status()
-        user_id = response.headers.get("Location").split("/")[-1] if response.headers.get("Location") else None
+        # user_id = response.headers.get("Location").split("/")[-1] if response.headers.get("Location") else None
+        user_id = response.json().get("user_id")
         log.info("Created Keycloak user")
         return user_id
     except Exception as e:
         log.error(f"Failed to create Keycloak user {email}: {e}")
         return None
+    
+def deactivate_keycloak_user(keycloak_user_id: str):
+    token = get_keycloak_admin_token()
+    if not token:
+        log.error("No admin token available for Keycloak")
+        return False
+    
+    user_url = f"{H2LOOP_BASE_URL}/api/v1/user-management/deactivate/{keycloak_user_id}/"
+    headers = {
+        "Authorization": f"Bearer {token}",
+    }
+    try:
+        response = requests.patch(user_url, headers=headers, json={
+            "custom_token": token
+        })
+        response.raise_for_status()
+        log.info(response.json().get("message", "Deactivated Keycloak user"))
+        return True
+    except Exception as e:
+        log.error(f"Failed to deactivate Keycloak user: {e}")
+        return False
 
 
 def delete_keycloak_user(keycloak_user_id: str):

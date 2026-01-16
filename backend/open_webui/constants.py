@@ -103,6 +103,9 @@ class ERROR_MESSAGES(str, Enum):
         "Duplicate content detected. Please provide unique content to proceed."
     )
     FILE_NOT_PROCESSED = "Extracted content is not available for this file. Please ensure that the file is processed before proceeding."
+    
+    USER_ALREADY_DEACTIVATED = "The user is already deactivated."
+    FAILED_KEYCLOAK_USER_DEACTIVATION = "Failed to deactivate user in Keycloak."
 
 
 class TASKS(str, Enum):

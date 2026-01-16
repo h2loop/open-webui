@@ -12,7 +12,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { updateUserRole, getUsers, deleteUserById } from '$lib/apis/users';
+	import { updateUserRole, getUsers, deleteUserById, deactivateUserById } from '$lib/apis/users';
 
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import ChatBubbles from '$lib/components/icons/ChatBubbles.svelte';
@@ -47,14 +47,14 @@
 
 	let selectedUser = null;
 
-	let showDeleteConfirmDialog = false;
+	let showDeactivateConfirmDialog = false;
 	let showAddUserModal = false;
 
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
 
-	const deleteUserHandler = async (id) => {
-		const res = await deleteUserById(localStorage.token, id).catch((error) => {
+	const deactivateUserHandler = async (id) => {
+		const res = await deactivateUserById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
@@ -106,9 +106,9 @@
 </script>
 
 <ConfirmDialog
-	bind:show={showDeleteConfirmDialog}
+	bind:show={showDeactivateConfirmDialog}
 	on:confirm={() => {
-		deleteUserHandler(selectedUser.id);
+		deactivateUserHandler(selectedUser.id);
 	}}
 />
 
@@ -400,7 +400,7 @@
 									</Tooltip>
 								{/if}
 
-								<Tooltip content={$i18n.t('Edit User')}>
+								<!-- <Tooltip content={$i18n.t('Edit User')}>
 									<button
 										class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 										on:click={async () => {
@@ -423,14 +423,14 @@
 											/>
 										</svg>
 									</button>
-								</Tooltip>
+								</Tooltip> -->
 
 								{#if user.role !== 'admin'}
-									<Tooltip content={$i18n.t('Delete User')}>
+									<Tooltip content={$i18n.t('Deactivate User')}>
 										<button
 											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 											on:click={async () => {
-												showDeleteConfirmDialog = true;
+												showDeactivateConfirmDialog = true;
 												selectedUser = user;
 											}}
 										>

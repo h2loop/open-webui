@@ -489,6 +489,8 @@ OAUTH_SESSION_TOKEN_ENCRYPTION_KEY = os.environ.get(
     "OAUTH_SESSION_TOKEN_ENCRYPTION_KEY", WEBUI_SECRET_KEY
 )
 
+H2LOOP_BASE_URL = os.environ.get("H2LOOP_BASE_URL", "https://hydron.h2loop.ai")
+
 ####################################
 # KEYCLOAK Configuration
 ####################################
@@ -497,8 +499,6 @@ KEYCLOAK_BASE_URL = os.environ.get("KEYCLOAK_BASE_URL", "https://hydron-dev.h2lo
 KEYCLOAK_REALM = os.environ.get("KEYCLOAK_REALM", "h2loop")
 KEYCLOAK_CLIENT_ID = os.environ.get("KEYCLOAK_CLIENT_ID", "h2loop-web")
 KEYCLOAK_CLIENT_SECRET = os.environ.get("KEYCLOAK_CLIENT_SECRET", "")
-KEYCLOAK_ADMIN_USERNAME = os.environ.get("KEYCLOAK_ADMIN_USERNAME", "")
-KEYCLOAK_ADMIN_PASSWORD = os.environ.get("KEYCLOAK_ADMIN_PASSWORD", "")
 
 ####################################
 # SCIM Configuration

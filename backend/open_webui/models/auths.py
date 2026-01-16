@@ -184,6 +184,28 @@ class AuthsTable:
                 return True if result == 1 else False
         except Exception:
             return False
+        
+    def get_auth_by_id(self, id: str) -> Optional[AuthModel]:
+        try:
+            with get_db() as db:
+                auth = db.query(Auth).filter_by(id=id).first()
+                if auth:
+                    return AuthModel(**auth.__dict__)
+                else:
+                    return None
+        except Exception:
+            return None
+
+    def update_user_active_status_by_id(self, id: str, active: bool) -> bool:
+        try:
+            with get_db() as db:
+                result = (
+                    db.query(Auth).filter_by(id=id).update({"active": active})
+                )
+                db.commit()
+                return True if result == 1 else False
+        except Exception:
+            return False
 
     def delete_auth_by_id(self, id: str) -> bool:
         try:
