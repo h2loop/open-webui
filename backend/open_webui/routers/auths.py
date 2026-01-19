@@ -934,6 +934,12 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
+        keycloak_user_id = create_keycloak_user(
+            form_data.email.lower(), form_data.name, form_data.password
+        )
+        if not keycloak_user_id:
+            raise HTTPException(500, detail="Failed to create user in Keycloak")
+
         hashed = get_password_hash(form_data.password)
         username = form_data.username or form_data.email.lower()
         user = Auths.insert_new_auth(
@@ -943,15 +949,10 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
             username=username,
             profile_image_url=form_data.profile_image_url,
             role=form_data.role,
+            oauth_sub=f"keycloak@{keycloak_user_id}",
         )
 
         if user:
-            keycloak_user_id = create_keycloak_user(
-                form_data.email.lower(), form_data.name, form_data.password
-            )
-            if keycloak_user_id:
-                Users.update_user_oauth_sub_by_id(user.id, f"keycloak@{keycloak_user_id}")
-
             token = create_token(data={"id": user.id})
             return {
                 "token": token,
