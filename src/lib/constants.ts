@@ -1,10 +1,5 @@
 import { browser, dev } from '$app/environment';
-import {
-	PUBLIC_KEYCLOAK_BASE_URL,
-	PUBLIC_KEYCLOAK_REALM,
-	PUBLIC_KEYCLOAK_CLIENT_ID,
-	PUBLIC_KEYCLOAK_CLIENT_SECRET
-} from '$env/static/public';
+import { env } from '$env/dynamic/public';
 // import { version } from '../../package.json';
 
 export const APP_NAME = 'H2Loop Playground';
@@ -19,10 +14,10 @@ export const AUDIO_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/audio`;
 export const IMAGES_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/images`;
 export const RETRIEVAL_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/retrieval`;
 
-export const KEYCLOAK_BASE_URL = PUBLIC_KEYCLOAK_BASE_URL || 'https://hydron.h2loop.ai';
-export const KEYCLOAK_REALM = PUBLIC_KEYCLOAK_REALM || 'h2loop';
-export const KEYCLOAK_CLIENT_ID = PUBLIC_KEYCLOAK_CLIENT_ID || 'h2loop-web';
-export const KEYCLOAK_CLIENT_SECRET = PUBLIC_KEYCLOAK_CLIENT_SECRET || '';
+export const KEYCLOAK_BASE_URL = env.PUBLIC_KEYCLOAK_BASE_URL || '';
+export const KEYCLOAK_REALM = env.PUBLIC_KEYCLOAK_REALM || '';
+export const KEYCLOAK_CLIENT_ID = env.PUBLIC_KEYCLOAK_CLIENT_ID || '';
+export const KEYCLOAK_CLIENT_SECRET = env.PUBLIC_KEYCLOAK_CLIENT_SECRET || '';
 
 export const WEBUI_VERSION = APP_VERSION;
 export const WEBUI_BUILD_HASH = APP_BUILD_HASH;
