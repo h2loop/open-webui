@@ -47,7 +47,7 @@ from open_webui.utils.misc import (
     convert_logit_bias_input_to_json,
 )
 
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user, get_current_user_optional
 from open_webui.utils.access_control import has_access
 
 
@@ -805,15 +805,22 @@ def convert_to_azure_payload(url, payload: dict, api_version: str):
 async def generate_chat_completion(
     request: Request,
     form_data: dict,
-    user=Depends(get_verified_user),
+    user=Depends(get_current_user_optional),  # Changed from get_verified_user
     bypass_filter: Optional[bool] = False,
 ):
+    payload = {**form_data}
+    
+    # For anonymous users, set default model and skip checks
+    if user is None:
+        if "model" not in payload or not payload["model"]:
+            payload["model"] = "gpt-3.5-turbo"  # Default model for anonymous users
+        bypass_filter = True  # Skip model access control
+    
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
     idx = 0
 
-    payload = {**form_data}
     metadata = payload.pop("metadata", None)
 
     model_id = form_data.get("model")
@@ -834,7 +841,7 @@ async def generate_chat_completion(
             payload = apply_system_prompt_to_body(system, payload, metadata, user)
 
         # Check if user has access to the model
-        if not bypass_filter and user.role == "user":
+        if not bypass_filter and user and user.role == "user":
             if not (
                 user.id == model_info.user_id
                 or has_access(
@@ -846,7 +853,7 @@ async def generate_chat_completion(
                     detail="Model not found",
                 )
     elif not bypass_filter:
-        if user.role != "admin":
+        if user and user.role != "admin":
             raise HTTPException(
                 status_code=403,
                 detail="Model not found",
@@ -876,12 +883,20 @@ async def generate_chat_completion(
 
     # Add user info to the payload if the model is a pipeline
     if "pipeline" in model and model.get("pipeline"):
-        payload["user"] = {
-            "name": user.name,
-            "id": user.id,
-            "email": user.email,
-            "role": user.role,
-        }
+        if user:
+            payload["user"] = {
+                "name": user.name,
+                "id": user.id,
+                "email": user.email,
+                "role": user.role,
+            }
+        else:
+            payload["user"] = {
+                "name": "Anonymous",
+                "id": "anonymous",
+                "email": "",
+                "role": "guest",
+            }
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]

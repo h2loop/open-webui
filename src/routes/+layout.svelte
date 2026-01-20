@@ -642,9 +642,14 @@
 						await goto(`/auth?redirect=${encodedUrl}`);
 					}
 				} else {
-					// Don't redirect if we're already on the auth page
+					// Don't redirect if we're already on the auth page or public routes
 					// Needed because we pass in tokens from OAuth logins via URL fragments
-					if ($page.url.pathname !== '/auth') {
+					const isPublicRoute = $page.url.pathname.startsWith('/p/') ||
+						$page.url.pathname.startsWith('/s/') ||
+						$page.url.pathname === '/chat' ||
+						$page.url.pathname === '/auth';
+
+					if (!isPublicRoute) {
 						await goto(`/auth?redirect=${encodedUrl}`);
 					}
 				}

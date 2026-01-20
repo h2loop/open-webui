@@ -443,6 +443,24 @@ async def get_chat_by_id(id: str, user=Depends(get_verified_user)):
 
 
 ############################
+# GetPublicChatById
+############################
+
+
+@router.get("/public/{id}", response_model=Optional[ChatResponse])
+async def get_public_chat_by_id(id: str):
+    chat = Chats.get_chat_by_id(id)
+
+    if chat:
+        return ChatResponse(**chat.model_dump())
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
+        )
+
+
+############################
 # UpdateChatById
 ############################
 
