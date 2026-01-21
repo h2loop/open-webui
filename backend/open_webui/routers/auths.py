@@ -133,7 +133,7 @@ def deactivate_keycloak_user(keycloak_user_id: str):
             "custom_token": token
         })
         response.raise_for_status()
-        log.info(response.json().get("message", "Deactivated Keycloak user"))
+        log.info("Deactivated Keycloak user")
         return True
     except Exception as e:
         log.error(f"Failed to deactivate Keycloak user: {e}")
