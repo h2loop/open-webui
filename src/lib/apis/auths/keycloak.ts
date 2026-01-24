@@ -2,13 +2,31 @@ export class KeycloakService {
 	private baseUrl: string;
 	private realm: string;
 	private clientId: string;
-	private clientSecret: string;
+	private codeVerifier: string | null = null;
+	private codeChallenge: string | null = null;
 
-	constructor(baseUrl: string, realm: string, clientId: string, clientSecret: string) {
+	constructor(baseUrl: string, realm: string, clientId: string) {
 		this.baseUrl = baseUrl;
 		this.realm = realm;
 		this.clientId = clientId;
-		this.clientSecret = clientSecret;
+	}
+
+	generateCodeVerifier(): string {
+		const array = new Uint8Array(32);
+		crypto.getRandomValues(array);
+		return btoa(String.fromCharCode(...array))
+			.replace(/=/g, '')
+			.replace(/\+/g, '-')
+			.replace(/\//g, '_');
+	}
+
+	async generateCodeChallenge(codeVerifier: string): Promise<string> {
+		const encoder = new TextEncoder();
+		const data = encoder.encode(codeVerifier);
+		const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+		const hashArray = new Uint8Array(hashBuffer);
+		const hashBase64 = btoa(String.fromCharCode(...hashArray));
+		return hashBase64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 	}
 
 	async exchangeCodeForTokens(
@@ -22,12 +40,22 @@ export class KeycloakService {
 	}> {
 		const tokenEndpoint = `${this.baseUrl}/realms/${this.realm}/protocol/openid-connect/token`;
 
+		if (!this.codeVerifier && typeof sessionStorage !== 'undefined') {
+			this.codeVerifier = sessionStorage.getItem('keycloak-code-verifier');
+		}
+
+		if (!this.codeVerifier) {
+			throw new Error(
+				'Code verifier not set. Ensure getAuthorizationUrl was called before exchanging code.'
+			);
+		}
+
 		const params = new URLSearchParams({
 			grant_type: 'authorization_code',
 			code,
 			redirect_uri: redirectUri,
 			client_id: this.clientId,
-			client_secret: this.clientSecret
+			code_verifier: this.codeVerifier
 		});
 
 		const response = await fetch(tokenEndpoint, {
@@ -47,6 +75,11 @@ export class KeycloakService {
 		}
 
 		const data = await response.json();
+
+		// Clear codeVerifier from sessionStorage after successful exchange
+		if (typeof sessionStorage !== 'undefined') {
+			sessionStorage.removeItem('keycloak-code-verifier');
+		}
 
 		return {
 			accessToken: data.access_token,
@@ -82,8 +115,7 @@ export class KeycloakService {
 		const params = new URLSearchParams({
 			grant_type: 'refresh_token',
 			refresh_token: refreshToken,
-			client_id: this.clientId,
-			client_secret: this.clientSecret
+			client_id: this.clientId
 		});
 
 		const response = await fetch(tokenEndpoint, {
@@ -111,15 +143,29 @@ export class KeycloakService {
 		};
 	}
 
-	getAuthorizationUrl(redirectUri: string, state: string, scope = 'openid profile email'): string {
+	async getAuthorizationUrl(
+		redirectUri: string,
+		state: string,
+		scope = 'openid profile email'
+	): Promise<string> {
 		const authEndpoint = `${this.baseUrl}/realms/${this.realm}/protocol/openid-connect/auth`;
+
+		this.codeVerifier = this.generateCodeVerifier();
+		this.codeChallenge = await this.generateCodeChallenge(this.codeVerifier);
+
+		// Store codeVerifier in sessionStorage for use after redirect
+		if (typeof sessionStorage !== 'undefined') {
+			sessionStorage.setItem('keycloak-code-verifier', this.codeVerifier);
+		}
 
 		const params = new URLSearchParams({
 			response_type: 'code',
 			client_id: this.clientId,
 			redirect_uri: redirectUri,
 			state,
-			scope
+			scope,
+			code_challenge: this.codeChallenge,
+			code_challenge_method: 'S256'
 		});
 
 		return `${authEndpoint}?${params.toString()}`;
@@ -129,8 +175,7 @@ export class KeycloakService {
 		const logoutEndpoint = `${this.baseUrl}/realms/${this.realm}/protocol/openid-connect/logout`;
 
 		const params = new URLSearchParams({
-			client_id: this.clientId,
-			client_secret: this.clientSecret
+			client_id: this.clientId
 		});
 
 		if (refreshToken) {

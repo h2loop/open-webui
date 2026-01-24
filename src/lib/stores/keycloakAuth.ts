@@ -1,11 +1,9 @@
 import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
-import { goto } from '$app/navigation';
 import { KeycloakService } from '$lib/apis/auths/keycloak';
 import {
 	KEYCLOAK_BASE_URL,
 	KEYCLOAK_CLIENT_ID,
-	KEYCLOAK_CLIENT_SECRET,
 	KEYCLOAK_REALM,
 	WEBUI_API_BASE_URL
 } from '$lib/constants';
@@ -40,12 +38,7 @@ export const keycloakAuth = (() => {
 	const initialize = () => {
 		if (!browser) return;
 
-		keycloakService = new KeycloakService(
-			KEYCLOAK_BASE_URL,
-			KEYCLOAK_REALM,
-			KEYCLOAK_CLIENT_ID,
-			KEYCLOAK_CLIENT_SECRET
-		);
+		keycloakService = new KeycloakService(KEYCLOAK_BASE_URL, KEYCLOAK_REALM, KEYCLOAK_CLIENT_ID);
 
 		loadCredentials();
 	};
@@ -125,7 +118,7 @@ export const keycloakAuth = (() => {
 		localStorage.setItem(AUTH_STATE_KEY, state);
 
 		const redirectUri = `${window.location.origin}/auth/keycloak/callback`;
-		const url = keycloakService.getAuthorizationUrl(redirectUri, state);
+		const url = await keycloakService.getAuthorizationUrl(redirectUri, state);
 		window.location.href = url;
 	};
 
