@@ -63,6 +63,7 @@
 			});
 
 			if (res) {
+				toast.success($i18n.t('User created successfully.'));
 				stopLoading();
 				show = false;
 			}

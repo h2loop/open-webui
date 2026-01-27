@@ -66,6 +66,7 @@
 		}
 
 		if (res) {
+			toast.success($i18n.t('User deactivated successfully.'));
 			getUserList();
 		}
 	};
