@@ -87,6 +87,7 @@ class SignupForm(BaseModel):
 
 class AddUserForm(SignupForm):
     role: Optional[str] = "pending"
+    username: Optional[str] = None
 
 
 class AuthsTable:
@@ -98,6 +99,7 @@ class AuthsTable:
         profile_image_url: str = "/user.png",
         role: str = "pending",
         oauth_sub: Optional[str] = None,
+        username: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
             log.info("insert_new_auth")
@@ -111,7 +113,7 @@ class AuthsTable:
             db.add(result)
 
             user = Users.insert_new_user(
-                id, name, email, profile_image_url, role, oauth_sub
+                id, name, email, profile_image_url, role, oauth_sub, username
             )
 
             db.commit()
@@ -126,12 +128,12 @@ class AuthsTable:
         log.info(f"authenticate_user: {email}")
 
         user = Users.get_user_by_email(email)
-        if not user:
+        if not user or not user.active:
             return None
 
         try:
             with get_db() as db:
-                auth = db.query(Auth).filter_by(id=user.id, active=True).first()
+                auth = db.query(Auth).filter_by(id=user.id).first()
                 if auth:
                     if verify_password(password, auth.password):
                         return user
@@ -158,10 +160,11 @@ class AuthsTable:
         log.info(f"authenticate_user_by_email: {email}")
         try:
             with get_db() as db:
-                auth = db.query(Auth).filter_by(email=email, active=True).first()
+                auth = db.query(Auth).filter_by(email=email).first()
                 if auth:
                     user = Users.get_user_by_id(auth.id)
-                    return user
+                    if user and user.active:
+                        return user
         except Exception:
             return None
 
@@ -180,6 +183,28 @@ class AuthsTable:
         try:
             with get_db() as db:
                 result = db.query(Auth).filter_by(id=id).update({"email": email})
+                db.commit()
+                return True if result == 1 else False
+        except Exception:
+            return False
+        
+    def get_auth_by_id(self, id: str) -> Optional[AuthModel]:
+        try:
+            with get_db() as db:
+                auth = db.query(Auth).filter_by(id=id).first()
+                if auth:
+                    return AuthModel(**auth.__dict__)
+                else:
+                    return None
+        except Exception:
+            return None
+
+    def update_user_active_status_by_id(self, id: str, active: bool) -> bool:
+        try:
+            with get_db() as db:
+                result = (
+                    db.query(Auth).filter_by(id=id).update({"active": active})
+                )
                 db.commit()
                 return True if result == 1 else False
         except Exception:

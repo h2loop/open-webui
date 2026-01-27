@@ -12,7 +12,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { updateUserRole, getUsers, deleteUserById } from '$lib/apis/users';
+	import { updateUserRole, getUsers, deleteUserById, deactivateUserById } from '$lib/apis/users';
 
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import ChatBubbles from '$lib/components/icons/ChatBubbles.svelte';
@@ -33,6 +33,7 @@
 	import Banner from '$lib/components/common/Banner.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { getKeycloakAccessToken } from '$lib/utils/auth-utils';
 
 	const i18n = getContext('i18n');
 
@@ -47,14 +48,14 @@
 
 	let selectedUser = null;
 
-	let showDeleteConfirmDialog = false;
+	let showDeactivateConfirmDialog = false;
 	let showAddUserModal = false;
 
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
 
-	const deleteUserHandler = async (id) => {
-		const res = await deleteUserById(localStorage.token, id).catch((error) => {
+	const deactivateUserHandler = async (id) => {
+		const res = await deactivateUserById(localStorage.token, getKeycloakAccessToken(), id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
@@ -65,6 +66,7 @@
 		}
 
 		if (res) {
+			toast.success($i18n.t('User deactivated successfully.'));
 			getUserList();
 		}
 	};
@@ -106,9 +108,9 @@
 </script>
 
 <ConfirmDialog
-	bind:show={showDeleteConfirmDialog}
+	bind:show={showDeactivateConfirmDialog}
 	on:confirm={() => {
-		deleteUserHandler(selectedUser.id);
+		deactivateUserHandler(selectedUser.id);
 	}}
 />
 
@@ -344,20 +346,20 @@
 			</thead>
 			<tbody class="">
 				{#each users as user, userIdx}
-					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
+					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs {user.active ? '' : 'opacity-40'}">
 						<td class="px-3 py-1 min-w-[7rem] w-28">
-							<button
-								class=" translate-y-0.5"
-								on:click={() => {
-									selectedUser = user;
-									showEditUserModal = !showEditUserModal;
-								}}
-							>
-								<Badge
-									type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
-									content={$i18n.t(user.role)}
-								/>
-							</button>
+								<button
+									class=" translate-y-0.5"
+									on:click={() => {
+										selectedUser = user;
+										showEditUserModal = !showEditUserModal;
+									}}
+								>
+									<Badge
+										type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
+										content={$i18n.t(user.role)}
+									/>
+								</button>
 						</td>
 						<td class="px-3 py-1 font-medium text-gray-900 dark:text-white max-w-48">
 							<div class="flex items-center">
@@ -400,7 +402,7 @@
 									</Tooltip>
 								{/if}
 
-								<Tooltip content={$i18n.t('Edit User')}>
+								<!-- <Tooltip content={$i18n.t('Edit User')}>
 									<button
 										class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 										on:click={async () => {
@@ -423,14 +425,14 @@
 											/>
 										</svg>
 									</button>
-								</Tooltip>
+								</Tooltip> -->
 
 								{#if user.role !== 'admin'}
-									<Tooltip content={$i18n.t('Delete User')}>
+									<Tooltip content={$i18n.t('Deactivate User')}>
 										<button
 											class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 											on:click={async () => {
-												showDeleteConfirmDialog = true;
+												showDeactivateConfirmDialog = true;
 												selectedUser = user;
 											}}
 										>

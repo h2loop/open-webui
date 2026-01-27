@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 import base64
 import io
+import time
 
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -11,6 +12,8 @@ from pydantic import BaseModel
 
 from open_webui.models.auths import Auths
 from open_webui.models.oauth_sessions import OAuthSessions
+
+from open_webui.routers.auths import deactivate_keycloak_user, delete_keycloak_user, update_keycloak_user
 
 from open_webui.models.groups import Groups
 from open_webui.models.chats import Chats
@@ -351,7 +354,7 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
             **{
                 "name": user.name,
                 "profile_image_url": user.profile_image_url,
-                "active": get_active_status_by_user_id(user_id),
+                "active": user.active,
             }
         )
     else:
@@ -417,8 +420,13 @@ async def get_user_profile_image_by_id(user_id: str, user=Depends(get_verified_u
 
 @router.get("/{user_id}/active", response_model=dict)
 async def get_user_active_status_by_id(user_id: str, user=Depends(get_verified_user)):
+    user_obj = Users.get_user_by_id(user_id)
+    if user_obj:
+        return {
+            "active": user_obj.active,
+        }
     return {
-        "active": get_user_active_status(user_id),
+        "active": False,
     }
 
 
@@ -487,6 +495,15 @@ async def update_user_by_id(
         )
 
         if updated_user:
+            # Update Keycloak user info if integrated
+            if updated_user.oauth_sub and updated_user.oauth_sub.startswith("keycloak@"):
+                keycloak_user_id = updated_user.oauth_sub.split("@", 1)[1]
+                update_keycloak_user(
+                    keycloak_user_id,
+                    updated_user.email,
+                    updated_user.name,
+                    form_data.password if form_data.password else None
+                )
             return updated_user
 
         raise HTTPException(
@@ -499,6 +516,53 @@ async def update_user_by_id(
         detail=ERROR_MESSAGES.USER_NOT_FOUND,
     )
 
+
+@router.patch("/{user_id}/deactivate", response_model=Optional[UserModel])
+async def deactivate_user_by_id(
+    request: Request,
+    user_id: str,
+    user=Depends(get_admin_user),
+):
+    token = request.headers.get("X-Keycloak-Token")
+    if not token:
+        log.error("No admin token available for Keycloak user deactivation")
+        raise HTTPException(500, detail="Keycloak admin token not provided")
+    if user.id != user_id:
+        user_to_deactivate = Users.get_user_by_id(user_id)
+        if not user_to_deactivate or not user_to_deactivate.active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.USER_ALREADY_DEACTIVATED,
+            )
+
+        if user_to_deactivate:
+            # Deactivate Keycloak user if integrated
+            if user_to_deactivate.oauth_sub and user_to_deactivate.oauth_sub.startswith("keycloak@"):
+                keycloak_user_id = user_to_deactivate.oauth_sub.split("@", 1)[1]
+                keycloak_deactivated = deactivate_keycloak_user(keycloak_user_id, token)
+                if not keycloak_deactivated:
+                    log.error(f"Failed to deactivate user in keycloak: {keycloak_user_id}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=ERROR_MESSAGES.FAILED_KEYCLOAK_USER_DEACTIVATION,
+                    )
+            # Update User table
+            updated_user = Users.update_user_by_id(
+                user_id,
+                {"active": False, "deactivated_at": int(time.time())}
+            )
+            if updated_user:
+                return updated_user
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT(),
+        )
+
+    # Prevent self-deactivation
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+    )
 
 ############################
 # DeleteUserById
@@ -521,8 +585,14 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not verify primary admin status.",
         )
-
+        
     if user.id != user_id:
+        # Check if user has Keycloak integration and delete from Keycloak
+        user_to_delete = Users.get_user_by_id(user_id)
+        if user_to_delete and user_to_delete.oauth_sub and user_to_delete.oauth_sub.startswith("keycloak@"):
+            keycloak_user_id = user_to_delete.oauth_sub.split("@", 1)[1]
+            delete_keycloak_user(keycloak_user_id)
+
         result = Auths.delete_auth_by_id(user_id)
 
         if result:

@@ -3,6 +3,7 @@ import uuid
 import time
 import datetime
 import logging
+import requests
 from aiohttp import ClientSession
 
 from open_webui.models.auths import (
@@ -23,6 +24,7 @@ from open_webui.models.oauth_sessions import OAuthSessions
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
+    H2LOOP_BASE_URL,
     WEBUI_AUTH,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
@@ -31,6 +33,8 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SECURE,
     WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
     ENABLE_INITIAL_ADMIN_SIGNUP,
+    KEYCLOAK_BASE_URL,
+    KEYCLOAK_REALM,
     SRC_LOG_LEVELS,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -63,6 +67,110 @@ router = APIRouter()
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+
+def create_keycloak_user(email: str, name: str, password: str, token: str):
+    if not token:
+        log.error("No admin token available for Keycloak")
+        return None
+
+    user_url = f"{H2LOOP_BASE_URL}/api/v1/user-management/register/"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    user_data = {
+        "username": email,
+        "email": email,
+        "firstName": name.split()[0] if name else "",
+        "lastName": " ".join(name.split()[1:]) if name and len(name.split()) > 1 else "",
+        "password": password,
+        "custom_token": token,
+    }
+    try:
+        response = requests.post(user_url, json=user_data, headers=headers)
+        response.raise_for_status()
+        # user_id = response.headers.get("Location").split("/")[-1] if response.headers.get("Location") else None
+        user_id = response.json().get("user_id")
+        log.info("Created Keycloak user")
+        return user_id
+    except Exception as e:
+        log.error(f"Failed to create Keycloak user {email}: {e}")
+        return None
+    
+def deactivate_keycloak_user(keycloak_user_id: str, token: str):
+    if not token:
+        log.error("No admin token available for Keycloak")
+        return False
+    
+    user_url = f"{H2LOOP_BASE_URL}/api/v1/user-management/deactivate/{keycloak_user_id}/"
+    headers = {
+        "Authorization": f"Bearer {token}",
+    }
+    try:
+        response = requests.patch(user_url, headers=headers, json={
+            "custom_token": token
+        })
+        response.raise_for_status()
+        log.info("Deactivated Keycloak user")
+        return True
+    except Exception as e:
+        log.error(f"Failed to deactivate Keycloak user: {e}")
+        return False
+
+
+def delete_keycloak_user(keycloak_user_id: str):
+    token = None  # Need to get token from client side
+    if not token:
+        log.error("No admin token available for Keycloak")
+        return False
+
+    user_url = f"{KEYCLOAK_BASE_URL}/admin/realms/{KEYCLOAK_REALM}/users/{keycloak_user_id}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+    }
+    try:
+        response = requests.delete(user_url, headers=headers)
+        response.raise_for_status()
+        log.info("Deleted Keycloak user")
+        return True
+    except Exception as e:
+        log.error(f"Failed to delete Keycloak user: {e}")
+        return False
+
+
+def update_keycloak_user(keycloak_user_id: str, email: str, name: str, password: Optional[str] = None):
+    token = None  # Need to get token from client side
+    if not token:
+        log.error("No admin token available for Keycloak")
+        return False
+
+    user_url = f"{KEYCLOAK_BASE_URL}/admin/realms/{KEYCLOAK_REALM}/users/{keycloak_user_id}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    user_data = {
+        "email": email,
+        "firstName": name.split()[0] if name else "",
+        "lastName": " ".join(name.split()[1:]) if name and len(name.split()) > 1 else "",
+    }
+    if password:
+        user_data["credentials"] = [
+            {
+                "type": "password",
+                "value": password,
+                "temporary": False,
+            }
+        ]
+    try:
+        response = requests.put(user_url, json=user_data, headers=headers)
+        response.raise_for_status()
+        log.info("Updated Keycloak user")
+        return True
+    except Exception as e:
+        log.error(f"Failed to update Keycloak user: {e}")
+        return False
 
 ############################
 # GetSessionUser
@@ -795,7 +903,11 @@ async def signout(request: Request, response: Response):
 
 
 @router.post("/add", response_model=SigninResponse)
-async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
+async def add_user(request: Request, form_data: AddUserForm, user=Depends(get_admin_user)):
+    token = request.headers.get("X-Keycloak-Token")
+    if not token:
+        log.error("No admin token available for Keycloak user creation")
+        raise HTTPException(500, detail="Keycloak admin token not provided")
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -805,13 +917,22 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
+        keycloak_user_id = create_keycloak_user(
+            form_data.email.lower(), form_data.name, form_data.password, token
+        )
+        if not keycloak_user_id:
+            raise HTTPException(500, detail="Failed to create user in Keycloak")
+
         hashed = get_password_hash(form_data.password)
+        username = form_data.username or form_data.email.lower()
         user = Auths.insert_new_auth(
-            form_data.email.lower(),
-            hashed,
-            form_data.name,
-            form_data.profile_image_url,
-            form_data.role,
+            email=form_data.email.lower(),
+            password=hashed,
+            name=form_data.name,
+            username=username,
+            profile_image_url=form_data.profile_image_url,
+            role=form_data.role,
+            oauth_sub=f"keycloak@{keycloak_user_id}",
         )
 
         if user:

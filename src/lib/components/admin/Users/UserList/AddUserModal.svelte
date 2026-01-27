@@ -11,6 +11,7 @@
 	import { generateInitialsImage } from '$lib/utils';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import { getKeycloakAccessToken } from '$lib/utils/auth-utils';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -48,16 +49,18 @@
 
 			const res = await addUser(
 				localStorage.token,
+				getKeycloakAccessToken(),
 				_user.name,
 				_user.email,
 				_user.password,
 				_user.role,
-				generateInitialsImage(_user.name)
+				generateInitialsImage(_user.name),
 			).catch((error) => {
 				toast.error(`${error}`);
 			});
 
 			if (res) {
+				toast.success($i18n.t('User created successfully.'));
 				stopLoading();
 				show = false;
 			}
@@ -80,8 +83,8 @@
 
 						if (idx > 0) {
 							if (
-								columns.length === 4 &&
-								['admin', 'user', 'pending'].includes(columns[3].toLowerCase())
+								(columns.length === 4 || columns.length === 5) &&
+								['admin', 'user', 'pending'].includes(columns[columns.length - 1].toLowerCase())
 							) {
 								const res = await addUser(
 									localStorage.token,
@@ -265,7 +268,7 @@
 
 								<div class=" text-xs text-gray-500">
 									ⓘ {$i18n.t(
-										'Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.'
+										'Ensure your CSV file includes 4 or 5 columns in this order: Name, Email, Password, Role.'
 									)}
 									<a
 										class="underline dark:text-gray-200"

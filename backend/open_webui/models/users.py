@@ -11,7 +11,7 @@ from open_webui.utils.misc import throttle
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, Date
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, Date
 from sqlalchemy import or_
 
 import datetime
@@ -44,6 +44,8 @@ class User(Base):
     oauth_sub = Column(Text, unique=True)
 
     last_active_at = Column(BigInteger)
+    active = Column(Boolean, default=True)
+    deactivated_at = Column(BigInteger, nullable=True)
 
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
@@ -76,6 +78,8 @@ class UserModel(BaseModel):
     oauth_sub: Optional[str] = None
 
     last_active_at: int  # timestamp in epoch
+    active: bool = True
+    deactivated_at: Optional[int] = None  # timestamp in epoch
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -159,6 +163,7 @@ class UsersTable:
         profile_image_url: str = "/user.png",
         role: str = "pending",
         oauth_sub: Optional[str] = None,
+        username: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
             user = UserModel(
@@ -166,9 +171,11 @@ class UsersTable:
                     "id": id,
                     "name": name,
                     "email": email,
+                    "username": username,
                     "role": role,
                     "profile_image_url": profile_image_url,
                     "last_active_at": int(time.time()),
+                    "active": True,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                     "oauth_sub": oauth_sub,
