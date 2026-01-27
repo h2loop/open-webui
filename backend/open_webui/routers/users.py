@@ -519,9 +519,14 @@ async def update_user_by_id(
 
 @router.patch("/{user_id}/deactivate", response_model=Optional[UserModel])
 async def deactivate_user_by_id(
+    request: Request,
     user_id: str,
     user=Depends(get_admin_user),
 ):
+    token = request.headers.get("X-Keycloak-Token")
+    if not token:
+        log.error("No admin token available for Keycloak user deactivation")
+        raise HTTPException(500, detail="Keycloak admin token not provided")
     if user.id != user_id:
         user_to_deactivate = Users.get_user_by_id(user_id)
         if not user_to_deactivate or not user_to_deactivate.active:
@@ -534,7 +539,7 @@ async def deactivate_user_by_id(
             # Deactivate Keycloak user if integrated
             if user_to_deactivate.oauth_sub and user_to_deactivate.oauth_sub.startswith("keycloak@"):
                 keycloak_user_id = user_to_deactivate.oauth_sub.split("@", 1)[1]
-                keycloak_deactivated = deactivate_keycloak_user(keycloak_user_id)
+                keycloak_deactivated = deactivate_keycloak_user(keycloak_user_id, token)
                 if not keycloak_deactivated:
                     log.error(f"Failed to deactivate user in keycloak: {keycloak_user_id}")
                     raise HTTPException(

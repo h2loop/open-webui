@@ -364,6 +364,7 @@ export const userSignOut = async () => {
 
 export const addUser = async (
 	token: string,
+	adminToken: string,
 	name: string,
 	email: string,
 	password: string,
@@ -377,7 +378,8 @@ export const addUser = async (
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
+			...(token && { authorization: `Bearer ${token}` }),
+			...(adminToken && { 'X-Keycloak-Token': adminToken })
 		},
 		body: JSON.stringify({
 			name: name,

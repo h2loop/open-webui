@@ -33,6 +33,7 @@
 	import Banner from '$lib/components/common/Banner.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import { getKeycloakAccessToken } from '$lib/utils/auth-utils';
 
 	const i18n = getContext('i18n');
 
@@ -54,7 +55,7 @@
 	let showEditUserModal = false;
 
 	const deactivateUserHandler = async (id) => {
-		const res = await deactivateUserById(localStorage.token, id).catch((error) => {
+		const res = await deactivateUserById(localStorage.token, getKeycloakAccessToken(), id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});

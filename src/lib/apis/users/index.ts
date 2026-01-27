@@ -430,14 +430,15 @@ export const deleteUserById = async (token: string, userId: string) => {
 	return res;
 };
 
-export const deactivateUserById = async (token: string, userId: string) => {
+export const deactivateUserById = async (token: string, adminToken: string, userId: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}/deactivate`, {
 		method: 'PATCH',
 		headers: {
 			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
+			Authorization: `Bearer ${token}`,
+			...(adminToken && { 'X-Keycloak-Token': adminToken })
 		}
 	})
 		.then(async (res) => {

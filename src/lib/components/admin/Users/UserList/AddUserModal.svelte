@@ -11,6 +11,7 @@
 	import { generateInitialsImage } from '$lib/utils';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import { getKeycloakAccessToken } from '$lib/utils/auth-utils';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -50,6 +51,7 @@
 
 			const res = await addUser(
 				localStorage.token,
+				getKeycloakAccessToken(),
 				_user.name,
 				_user.email,
 				_user.password,

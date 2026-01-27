@@ -71,25 +71,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-def get_keycloak_admin_token():
-    token_url = f"{KEYCLOAK_BASE_URL}/realms/{KEYCLOAK_REALM}/protocol/openid-connect/token"
-    
-    data = {
-        "grant_type": "client_credentials",
-        "client_id": KEYCLOAK_CLIENT_ID,
-        "client_secret": KEYCLOAK_CLIENT_SECRET,
-    }
-    try:
-        response = requests.post(token_url, data=data)
-        response.raise_for_status()
-        return response.json().get("access_token")
-    except Exception as e:
-        log.error(f"Failed to get Keycloak admin token: {e}")
-        return None
-
-
-def create_keycloak_user(email: str, name: str, password: str):
-    token = get_keycloak_admin_token()
+def create_keycloak_user(email: str, name: str, password: str, token: str):
     if not token:
         log.error("No admin token available for Keycloak")
         return None
@@ -118,8 +100,7 @@ def create_keycloak_user(email: str, name: str, password: str):
         log.error(f"Failed to create Keycloak user {email}: {e}")
         return None
     
-def deactivate_keycloak_user(keycloak_user_id: str):
-    token = get_keycloak_admin_token()
+def deactivate_keycloak_user(keycloak_user_id: str, token: str):
     if not token:
         log.error("No admin token available for Keycloak")
         return False
@@ -141,7 +122,7 @@ def deactivate_keycloak_user(keycloak_user_id: str):
 
 
 def delete_keycloak_user(keycloak_user_id: str):
-    token = get_keycloak_admin_token()
+    token = None  # Need to get token from client side
     if not token:
         log.error("No admin token available for Keycloak")
         return False
@@ -161,7 +142,7 @@ def delete_keycloak_user(keycloak_user_id: str):
 
 
 def update_keycloak_user(keycloak_user_id: str, email: str, name: str, password: Optional[str] = None):
-    token = get_keycloak_admin_token()
+    token = None  # Need to get token from client side
     if not token:
         log.error("No admin token available for Keycloak")
         return False
@@ -924,7 +905,11 @@ async def signout(request: Request, response: Response):
 
 
 @router.post("/add", response_model=SigninResponse)
-async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
+async def add_user(request: Request, form_data: AddUserForm, user=Depends(get_admin_user)):
+    token = request.headers.get("X-Keycloak-Token")
+    if not token:
+        log.error("No admin token available for Keycloak user creation")
+        raise HTTPException(500, detail="Keycloak admin token not provided")
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -935,7 +920,7 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
 
     try:
         keycloak_user_id = create_keycloak_user(
-            form_data.email.lower(), form_data.name, form_data.password
+            form_data.email.lower(), form_data.name, form_data.password, token
         )
         if not keycloak_user_id:
             raise HTTPException(500, detail="Failed to create user in Keycloak")
