@@ -495,10 +495,8 @@ H2LOOP_BASE_URL = os.environ.get("H2LOOP_BASE_URL", "https://hydron.h2loop.ai")
 # KEYCLOAK Configuration
 ####################################
 
-KEYCLOAK_BASE_URL = os.environ.get("KEYCLOAK_BASE_URL", "https://hydron-dev.h2loop.ai")
+KEYCLOAK_BASE_URL = os.environ.get("KEYCLOAK_BASE_URL", "https://hydron.h2loop.ai")
 KEYCLOAK_REALM = os.environ.get("KEYCLOAK_REALM", "h2loop")
-KEYCLOAK_CLIENT_ID = os.environ.get("KEYCLOAK_CLIENT_ID", "h2loop-web")
-KEYCLOAK_CLIENT_SECRET = os.environ.get("KEYCLOAK_CLIENT_SECRET", "")
 
 ####################################
 # SCIM Configuration

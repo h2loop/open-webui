@@ -25,7 +25,6 @@ from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
     H2LOOP_BASE_URL,
-    KEYCLOAK_CLIENT_SECRET,
     WEBUI_AUTH,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
@@ -36,7 +35,6 @@ from open_webui.env import (
     ENABLE_INITIAL_ADMIN_SIGNUP,
     KEYCLOAK_BASE_URL,
     KEYCLOAK_REALM,
-    KEYCLOAK_CLIENT_ID,
     SRC_LOG_LEVELS,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
